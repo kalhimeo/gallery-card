@@ -308,6 +308,7 @@ class GalleryCard extends LitElement {
     const captionFormat = this.config.caption_format;
     const parsedDateSort = this.config.parsed_date_sort ?? false;
     const reverseSort = this.config.reverse_sort ?? true;
+    const camerafirst = this.config.camera_first ?? false;
 
     this.config.entities.forEach(entity => {
       var entityId;
@@ -336,7 +337,7 @@ class GalleryCard extends LitElement {
         }
         else {
           if (entityState.attributes.entity_picture != undefined)
-            commands.push(this._loadCameraResource(entityId, entityState));
+            commands.push(this._loadCameraResource(entityId, entityState, reverseSort, camerafirst));
 
           if (entityState.attributes.fileList != undefined)
             commands.push(this._loadFilesResources(entityState.attributes.fileList, maximumFiles, fileNameFormat, captionFormat, reverseSort));
@@ -484,13 +485,16 @@ class GalleryCard extends LitElement {
     })
   }
 
-  _loadCameraResource(entityId, camera) {
+  _loadCameraResource(entityId, camera, reverseSort, camerafirst) {
+    var date = 9999999999;
+    if ((reverseSort && !camerafirst) || (!reverseSort && camerafirst)) date = 0;
     var resource = {
       url: camera.attributes.entity_picture,
       name: entityId,
       extension: "jpg",
       caption: camera.attributes.friendly_name ?? entityId,
-      isHass: true
+      isHass: true,
+      date: date
     }
   
     return Promise.resolve(resource);
@@ -918,6 +922,10 @@ class GalleryCardEditor extends LitElement {
     return this._config.reverse_sort ?? true;
   }  
 
+  get _camerafirst() {
+    return this._config.camera_first ?? false;
+  }  
+
   get _showReload() {
     return this._config.show_reload ?? false;
   }
@@ -1071,6 +1079,11 @@ class GalleryCardEditor extends LitElement {
             .configValue = "${"reverse_sort"}"
             @click="${this._valueChanged}"
           ></ha-checkbox>Reverse sort (newest first)<br/>
+        <ha-checkbox
+            .checked="${this._camerafirst}"
+            .configValue = "${"camera_first"}"
+            @click="${this._valueChanged}"
+          ></ha-checkbox>Reverse sort (newest first)<br/>
         <paper-input
           .label="${"Maximum files per entity to display"}
           (${this.hass.localize(
@@ -1152,6 +1165,12 @@ class GalleryCardEditor extends LitElement {
       this._config = {
         ...this._config,
         reverse_sort: !target.checked
+      };
+    }
+    else if (target.configValue == "camera_first") {
+      this._config = {
+        ...this._config,
+        camera_first: !target.checked
       };
     }
     else if (target.configValue == "show_reload") {
